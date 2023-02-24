@@ -1,0 +1,89 @@
+
+import numpy as np
+from Bio import SeqIO
+
+def fasta_seq(input_file):
+    with open(input_file,'r') as f:
+        for i in SeqIO.parse(f,'fasta'): sequence = i.seq
+    return str(sequence)
+
+v = fasta_seq(args[])
+
+#generate substitution matrix
+def init_substitution_dectionary(substitution_matrix:list):
+    """ This function generates a dictionary of dictionaries for the substitution matrix. 
+    """
+    keys = ['A', 'C', 'G', 'T']
+    substitution_matrix = {}
+    for pos,i in enumerate(keys):
+        substitution_matrix[i] = {}
+        for pos_1,j in enumerate(keys):
+            substitution_matrix[i][j] = int(substitution_matrix[pos][pos_1])
+    return substitution_matrix
+
+
+#backtrack function for global alignment linear cost
+def backtrack(v, w, substitution_matrix, gapcost , alignment_matrix):
+    n, m = len(v), len(w)
+    v = '-' + v
+    w = '-' + w
+    backtrack_matrix = np.zeros((n+1, m+1), dtype=int)
+    for i in range(1, n+1):
+        for j in range(1, m+1):
+            match = alignment_matrix[i-1, j-1] + substitution_matrix[v[i]][w[j]]
+            delete = alignment_matrix[i-1, j] + gapcost
+            insert = alignment_matrix[i, j-1] + gapcost
+            alignment_matrix[i, j] = max(match, delete, insert)
+            if alignment_matrix[i, j] == match:
+                backtrack_matrix[i, j] = 0
+            elif alignment_matrix[i, j] == delete:
+                backtrack_matrix[i, j] = 1
+            else:
+                backtrack_matrix[i, j] = 2
+    i, j = n, m
+    v_aligned, w_aligned = '', ''
+    while i > 0 and j > 0:
+        if backtrack_matrix[i, j] == 0:
+            v_aligned = v[i] + v_aligned
+            w_aligned = w[j] + w_aligned
+            i -= 1
+            j -= 1
+        elif backtrack_matrix[i, j] == 1:
+            v_aligned = v[i] + v_aligned
+            w_aligned = '-' + w_aligned
+            i -= 1
+        else:
+            v_aligned = '-' + v_aligned
+            w_aligned = w[j] + w_aligned
+            j -= 1
+    while i > 0:
+        v_aligned = v[i] + v_aligned
+        w_aligned = '-' + w_aligned
+        i -= 1
+    while j > 0:
+        v_aligned = '-' + v_aligned
+        w_aligned = w[j] + w_aligned
+        j -= 1
+    return v_aligned, w_aligned
+
+#global alignment function for linear cost
+def global_gap_cost_matrix(seq1:str, seq2:str, gap_cost:int, substitution_matrix:dict, alignment:bool=False):
+    """ This function takes two sequences, a gap cost and a substitution matrix 
+        and returns the cost matrix for the alignment of the two sequences. 
+    """
+    n = len(seq1) + 1
+    m = len(seq2) + 1
+    # Initialize the matrices
+    M = np.zeros((n, m))
+    for i in range(1, n):
+        M[i][0] =  gap_cost * i
+    for j in range(1, m):
+        M[0][j] =  gap_cost * j
+    for i in range(1, n):
+        for j in range(1, m):
+            substitution_cost = substitution_matrix[seq1[i-1]][seq2[j-1]]
+            M[i][j] = max(M[i-1][j-1] + substitution_cost, M[i][j-1] + gap_cost, M[i-1][j] + gap_cost)
+    if not alignment:
+        return M[n-1][m-1]
+    else:
+        return backtrack(seq1, seq2, substitution_matrix, gap_cost, M)

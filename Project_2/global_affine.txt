@@ -1,0 +1,56 @@
+import numpy as np
+
+substitution_matrix ={'A': {'A': 0, 'C': 5, 'G':2, 'T': 5}, 
+                    'C': {'A': 5, 'C': 0, 'G': 5, 'T': 2}, 
+                    'G': {'A': 2, 'C': 5, 'G': 0, 'T': 5}, 
+                    'T': {'A': 5, 'C': 2, 'G': 5, 'T': 0}}
+
+
+def affine_gap_cost_matrix(seq1, seq2, substitution_matrix, beta, alpha):
+    n = len(seq1) + 1
+    m = len(seq2) + 1
+
+    # Initialize the matrices
+    S = np.full((n, m), np.nan)
+    D = np.full((n, m), np.nan)
+    I = np.full((n, m), np.nan)
+
+
+    # Fill in the rest of the matrices
+    for i in range(n):
+        for j in range(m): 
+            #fill D corresponding to deletions in seq1
+            d1 = d2 = np.nan # NaN values 
+            if i > 0 and j >= 0:
+                d1 = S[i-1,j] + (alpha + beta)
+            if i > 1 and j >= 0:
+                d2 = D[i-1,j] + alpha
+            D[i,j] = np.nanmin([d1,d2]) #pick min value ignoring NaN
+
+            #fill I The matrix with insertions (here insertions in seq1)
+            i1 = i2 = np.nan
+            if i >= 0 and j > 0:
+                i1 = S[i,j-1] + (alpha + beta)
+            if i >= 0 and j > 1:
+                i2 = I[i,j-1] + alpha
+            I[i][j] = np.nanmin([i1,i2])
+
+            # fill S
+            s0 = s1 = s2 = s3 = np.nan
+            if i==0 and j==0:
+                s0 = 0
+            if i > 0 and j > 0:
+                s1 = S[i-1,j-1] + substitution_matrix[seq1[i-1]][seq2[j-1]] #looking in the substitution matrix
+            if i > 0 and j >= 0:
+                s2 = D[i][j]
+            if i >=0 and j > 0:
+                s3 = I[i][j]
+            S[i][j] = np.nanmin([s0,s1,s2,s3])
+    return S
+        
+                
+
+
+
+
+print(affine_gap_cost_matrix('ACGTGTCAACGT', 'ACGTCGTAGCTA', substitution_matrix, 5, 5))

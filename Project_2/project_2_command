@@ -7,7 +7,7 @@ def fasta_seq(input_file):
         for i in SeqIO.parse(f,'fasta'): sequence = i.seq
     return str(sequence)
 
-v = fasta_seq(args[])
+v = fasta_seq()
 
 #generate substitution matrix
 def init_substitution_dectionary(substitution_matrix:list):
